@@ -451,6 +451,24 @@ def create_celeba(tfrecord_dir, celeba_dir, cx=89, cy=121):
 
 #----------------------------------------------------------------------------
 
+def create_reddesert(tfrecord_dir, reddesert_dir, cx=89, cy=121):
+    print('Loading redDesert from "%s"' % reddesert_dir)
+    glob_pattern = os.path.join(reddesert_dir, 'redDesert-image-training-256', '*.png')
+    image_filenames = sorted(glob.glob(glob_pattern))
+    expected_images = 164517
+    if len(image_filenames) != expected_images:
+        error('Expected to find %d images' % expected_images)
+    
+    with TFRecordExporter(tfrecord_dir, len(image_filenames)) as tfr:
+        order = tfr.choose_shuffled_order()
+        for idx in range(order.size):
+            img = np.asarray(PIL.Image.open(image_filenames[order[idx]]))
+            assert img.shape == (256, 256, 3)
+            # img = img[cy - 64 : cy + 64, cx - 64 : cx + 64]
+            img = img.transpose(2, 0, 1) # HWC => CHW
+            tfr.add_image(img)
+#----------------------------------------------------------------------------
+
 def create_celebahq(tfrecord_dir, celeba_dir, delta_dir, num_threads=4, num_tasks=100):
     print('Loading CelebA from "%s"' % celeba_dir)
     expected_images = 202599
@@ -706,6 +724,11 @@ def execute_cmdline(argv):
     p.add_argument(     'celeba_dir',       help='Directory containing CelebA')
     p.add_argument(     '--cx',             help='Center X coordinate (default: 89)', type=int, default=89)
     p.add_argument(     '--cy',             help='Center Y coordinate (default: 121)', type=int, default=121)
+
+    p = add_command(    'create_reddesert',    'Create dataset for RedDesert.',
+                                            'create_celeba datasets/redDesert ~/downloads/RedDesert')
+    p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
+    p.add_argument(     'reddesert_dir',       help='Directory containing RedDesert')
 
     p = add_command(    'create_celebahq',  'Create dataset for CelebA-HQ.',
                                             'create_celebahq datasets/celebahq ~/downloads/celeba ~/downloads/celeba-hq-deltas')
